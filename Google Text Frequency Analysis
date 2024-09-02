@@ -1,0 +1,161 @@
+#This code performs a text frequency analysis of Google's Privacy Policies from the years: 2009, 2014, and 2019.
+
+#Install the nltk package onto the Try Jupyter environment.
+import sys
+!{sys.executable} -m pip install nltk
+!{sys.executable} -m pip install matplotlib
+
+import string
+import nltk 
+import matplotlib.pyplot as plt
+from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
+nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+
+#Load in the file based on the filename. If the filename doesn't exist, the program exits.
+#Edit this file name when using different text file. In this case, the year should be changed.
+filename = 'google_privacy_policy_2009.txt'
+
+try:
+    file = open(filename)
+except:
+    print('File cannot be opened: ', filename)
+
+#Load in the stopwords from the downloaded nltk stopwords list.
+#We also add additional stopwords that are irrelevant for analysis.
+lmtzr = WordNetLemmatizer()
+stop = stopwords.words('english')
+stop.append("•")
+stop.append("amazoncom")
+stop.append("1997")
+stop.append("may")
+stop.append("like")
+stop.append("google")
+stop.append("use")
+stop.append("used")
+stop.append("information")
+stop.append("example")
+stop.append("examples")
+stop.append("also")
+stop.append("help")
+stop.append("helping")
+stop.append("u")
+stop.append("us")
+stop.append("example")
+stop.append("examples")
+stop.append("learn")
+stop.append("learning")
+stop.append("include")
+stop.append("includes")
+stop.append("including")
+stop.append("provide")
+stop.append("provides")
+stop.append("provided")
+stop.append("providing")
+stop.append("privacy")
+stop.append("agreement")
+stop.append("agreements")
+stop.append("site")
+stop.append("sites")
+stop.append("web")
+stop.append("website")
+stop.append("address")
+stop.append("browser")
+stop.append("cookies")
+stop.append("cookie")
+stop.append("thing")
+stop.append("things")
+stop.append("people")
+stop.append("update")
+stop.append("updates")
+stop.append("updated")
+stop.append("service")
+stop.append("services")
+stop.append("policy")
+stop.append("policies")
+stop.append("account")
+stop.append("accounts")
+stop.append("–")
+stop.append("many")
+stop.append("see")
+stop.append("view")
+stop.append("review")
+stop.append("order")
+stop.append("change")
+stop.append("changes")
+stop.append("number")
+stop.append("numbers")
+
+#TODO: FILL IN THE FOLLOWING FUNCTIONS
+def sort_and_reverse(lst):
+    '''Given some list, we want to first sort it and then reverse it after. Here the order is important!
+    The code should be only one or two lines given the following two list functions:
+    https://www.w3schools.com/python/ref_list_sort.asp
+    https://www.programiz.com/python-programming/methods/list/reverse
+
+    NOTE: These functions do not actually return another list, they instead modify the list being passed into our argument.
+    So we do not need to return anything for this function'''
+
+    #SOLUTION GOES HERE
+    #Sort list in word counts
+    lst.sort()
+    #Reverse list after we have sorted it so that it goes from highest to lowest
+    lst.reverse()
+
+#This function graphs the words we choose onto a bar graph and adjusts the labels.
+def graph_words(wordlist, N):
+    words=[]
+    counts=[]
+    for x, word in wordlist[:N]:
+        words.append(word)
+        counts.append(x)
+    fig, ax = plt.subplots()
+    ax.bar(words, counts)
+    fig.autofmt_xdate()
+    plt.show()
+
+
+#Takes in the file, stopwords list, and number of important words and returns the most frequent words.
+def most_frequent_words(file, stop, N):
+    #Here we create a dictionary, which we will assign a value to each word corresponding to the number of times this word appears.
+    counts = dict()
+
+    for line in file:
+        line = line.rstrip()
+        line = line.translate(line.maketrans('', '', string.punctuation))
+        line = line.lower()
+        words = line.split()
+
+        #Now processes the words list, and removes the stop words.
+        for word in words:
+            if word not in stop:
+                #Lemmatizing- we group similar word inflections together (e.g. rock and rocks becomes the same word)
+                word=lmtzr.lemmatize(word)
+                if word not in counts:
+                    counts[word] = 1
+                else:
+                    counts[word] += 1
+
+    #Puts the dictionary of counts into a list.
+    word_list = [(counts[w], w) for w in counts]
+
+    #Sort and reverse the list.
+    sort_and_reverse(word_list)
+
+    #Prints the table of most frequent words
+    print("The " + str(N) + " most frequent words are")
+    print("Rank\tCount\tWord")
+    i = 1
+    for x, word in word_list[:N]:
+        print('%2s\t%4s\t%s' %(i, x, word))
+        i += 1
+
+    #Plot the words.
+    graph_words(word_list, N)
+
+#This function returns the top 13 words.
+most_frequent_words(file, stop, 13)
+
+#End of script
