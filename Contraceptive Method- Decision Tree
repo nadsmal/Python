@@ -1,0 +1,179 @@
+#Decision Tree for Contraceptive Methods
+#Created By: Nadia Malik
+#Updated 9/22/2024
+
+#Load libraries
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+#Decision tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score, confusion_matrix, roc_curve, auc
+
+df = pd.read_csv('cmc.csv') #read dataset
+
+df.head(10) #View first 10
+
+#Show the number of rows and columns
+df.shape
+
+#Overview of variables and data types
+print(df.info())
+
+#Check for null values
+print(df.isnull().sum())
+
+df.duplicated().sum() #Check for duplicates
+#Duplicates are those with the same information, ok in this case
+
+df.columns #Show column names
+#All are relevant for analysis
+
+#Summary statistics of variables
+print(df.describe())
+
+#Histogram of Wife Ages
+sns.histplot(df['WifeAge'], kde=True)
+plt.title('Distribution of Wife\'s Age')
+plt.show()
+
+#Histogram of Number of Children
+sns.histplot(df['NumChildren'], kde=True)
+plt.title('Distribution of Number of Children')
+plt.show()
+
+#Show long-form for plotting
+df_melted = df.melt(value_vars=['WifeEducation', 'HusbandEducation'],
+                    var_name='EducationType',
+                    value_name='EducationLevel')
+
+#Show both with one axis for count
+plt.figure(figsize=(10, 6))
+sns.countplot(x='EducationLevel', hue='EducationType', data=df_melted)
+plt.title('Comparison of Wife\'s and Husband\'s Education')
+plt.xlabel('Education Level')
+plt.ylabel('Count')
+plt.legend(title='Education Type')
+plt.show()
+
+#Plot the bar graph of standard of living by contraceptive method
+plt.figure(figsize=(10, 6))
+sns.countplot(x='LivingStandardIndex', hue='ContraceptiveMethod', data=df)
+plt.title('Standard of Living Distribution by Contraceptive Method')
+plt.xlabel('Standard of Living Index')
+plt.ylabel('Count')
+plt.legend(title='Contraceptive Method', loc='upper right')
+plt.show()
+
+#Number of Children vs Contraceptive Method Used
+plt.figure(figsize=(8, 6))
+sns.boxplot(x='ContraceptiveMethod', y='NumChildren',hue='ContraceptiveMethod', data=df)
+plt.title('Number of Children by Contraceptive Method')
+plt.xlabel('Contraceptive Method')
+plt.ylabel('Number of Children')
+plt.show()
+
+#Wife's Age vs Number of Children
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x='WifeAge', y='NumChildren', data=df)
+plt.title('Wife\'s Age vs Number of Children')
+plt.xlabel('Wife\'s Age')
+plt.ylabel('Number of Children')
+plt.show()
+
+#Calculate mean media exposure for each contraceptive method
+mean_exposure = df.groupby('ContraceptiveMethod')['MediaExposure'].mean().sort_values(ascending=False)
+
+#Create a bar plot
+plt.figure(figsize=(10, 6))
+mean_exposure.plot(kind='bar')
+#Label plot
+plt.title('Average Media Exposure by Contraceptive Method')
+plt.xlabel('Contraceptive Method')
+plt.ylabel('Average Media Exposure')
+# Adjust layout and display
+plt.tight_layout()
+plt.show()
+
+#Treat outliers for NumChildren
+Q1 = df['NumChildren'].quantile(0.25)
+Q3 = df['NumChildren'].quantile(0.75)
+IQR = Q3 - Q1
+#Filter out outliers
+df_cleaned = df[(df['NumChildren'] >= Q1 - 1.5 * IQR) & (df['NumChildren'] <= Q3 + 1.5 * IQR)]
+
+#Define features and target variable
+X= df.drop('ContraceptiveMethod', axis=1) #feature variables
+y = df['ContraceptiveMethod']  #Target variable
+
+#Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+#Create the Decision Tree- Initial model without hyperparameter tuning
+clf = DecisionTreeClassifier(random_state=42)
+clf.fit(X_train, y_train)
+
+#Display decision tree model 1
+plt.figure(figsize=(20,10))
+plot_tree(clf, filled=True, feature_names=X.columns, class_names=['No Use', 'Long-term', 'Short-term'], rounded=True)
+plt.title("Decision Tree 1")
+plt.show()
+
+#Evaluate the initial model accuracy
+y_pred = clf.predict(X_test)
+print(f"Initial Accuracy: {accuracy_score(y_test, y_pred)}")
+print(classification_report(y_test, y_pred))
+
+#Hyperparameter tuning to improve model accuracy
+param_grid = {
+    'max_depth': [3, 5, 7],
+    'min_samples_leaf': [5, 10, 15],
+    'criterion': ['gini', 'entropy']
+}
+
+grid_search = GridSearchCV(DecisionTreeClassifier(random_state=42), param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+
+#Show best model accuracy
+best_params = grid_search.best_params_
+best_model = grid_search.best_estimator_
+
+print(f"Best Parameters: {best_params}")
+
+#Display the tuned decision tree 2
+plt.figure(figsize=(20,10))
+plot_tree(best_model, filled=True, feature_names=X.columns, class_names=['No Use', 'Long-term', 'Short-term'], rounded=True)
+plt.title("Decision Tree 2")
+plt.show()
+
+#Evaluate tuned model
+y_pred_tuned = best_model.predict(X_test)
+print(f"Tuned Model Accuracy: {accuracy_score(y_test, y_pred_tuned)}")
+print(classification_report(y_test, y_pred_tuned))
+
+#Extract feature importances from best model
+importances = best_model.feature_importances_
+feature_importances = pd.DataFrame({'Feature': X.columns, 'Importance': importances})
+#Sort the df by importance
+feature_importances = feature_importances.sort_values(by='Importance', ascending=False)
+
+#Visualize feature importances with a bar plot
+plt.figure(figsize=(10, 6))
+plt.barh(feature_importances['Feature'], feature_importances['Importance'], color='skyblue')
+plt.xlabel('Feature Importance')
+plt.ylabel('Features')
+plt.title('Feature Importances in Decision Tree Model 2')
+plt.gca().invert_yaxis()
+plt.show()
+
+#Confusion matrix display for tuned model
+cm_tuned = confusion_matrix(y_test, y_pred_tuned)
+ConfusionMatrixDisplay(cm_tuned, display_labels=['No Use', 'Long-term', 'Short-term']).plot()
+plt.title("Confusion Matrix for Model 2")
+plt.show()
